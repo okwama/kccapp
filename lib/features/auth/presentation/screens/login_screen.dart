@@ -128,7 +128,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Sales Force Automation',
+                            'Sales  Automation',
                             style: TextStyle(
                               fontSize: 16,
                               color: Colors.white.withOpacity(0.8),

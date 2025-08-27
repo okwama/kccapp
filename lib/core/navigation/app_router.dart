@@ -21,6 +21,8 @@ import '../../features/reports/presentation/pages/visibility_report_form.dart';
 import '../../features/clients/presentation/pages/clients_list_page.dart';
 import '../../features/clients/presentation/pages/add_client_page.dart';
 import '../../features/clients/presentation/pages/client_details_page.dart';
+import '../../features/notices/presentation/pages/notices_page.dart';
+import '../../features/notices/presentation/pages/notice_detail_page.dart';
 import 'package:intl/intl.dart';
 
 class AppRouter {
@@ -511,6 +513,17 @@ class AppRouter {
         builder: (context, state) {
           final clientId = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
           return ClientDetailsPage(clientId: clientId);
+        },
+      ),
+      GoRoute(
+        path: '/notices',
+        builder: (context, state) => const NoticesPage(),
+      ),
+      GoRoute(
+        path: '/notices/:id',
+        builder: (context, state) {
+          final noticeId = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+          return NoticeDetailPage(noticeId: noticeId);
         },
       ),
       GoRoute(

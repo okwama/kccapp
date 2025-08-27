@@ -1,11 +1,11 @@
 class AppConstants {
   // API Configuration
-  static const String apiBaseUrl = 'http://localhost:3000/api';
+  static const String apiBaseUrl = 'https://kcc-api.vercel.app/api';
   static const Duration connectionTimeout = Duration(seconds: 30);
   static const Duration receiveTimeout = Duration(seconds: 30);
 
   // App Configuration
-  static const String appName = 'KCC Sales Force';
+  static const String appName = 'KCC Sales';
   static const String appVersion = '1.0.0';
 
   // Storage Keys

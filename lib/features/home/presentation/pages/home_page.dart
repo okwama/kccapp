@@ -160,7 +160,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('KCC Sales Force'),
+        title: const Text('KCC Sales'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -216,148 +216,26 @@ class _HomePageState extends ConsumerState<HomePage> {
               physics: const AlwaysScrollableScrollPhysics(),
               child: Column(
                 children: [
-                  // Welcome Section
+                  // Sales Rep Name Section
                   Container(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 25,
-                              backgroundColor: Colors.white,
-                              child: Text(
-                                user?.name.substring(0, 1).toUpperCase() ?? 'U',
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Welcome back!',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    user?.name ?? 'User',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  Text(
-                                    user?.role ?? 'Sales Representative',
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.9),
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  // Clock Status Indicator
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: clockInOutState.status.isClockedIn
-                                          ? AppColors.success.withOpacity(0.9)
-                                          : Colors.white.withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(
-                                        color:
-                                            clockInOutState.status.isClockedIn
-                                                ? AppColors.success
-                                                : Colors.white.withOpacity(0.3),
-                                        width: 1,
-                                      ),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          clockInOutState.status.isClockedIn
-                                              ? Icons.access_time_filled
-                                              : Icons.access_time,
-                                          color: clockInOutState
-                                                  .status.isClockedIn
-                                              ? Colors.white
-                                              : Colors.white.withOpacity(0.8),
-                                          size: 16,
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          clockInOutState.status.isClockedIn
-                                              ? 'Currently Working'
-                                              : 'Ready to Start',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                            color: clockInOutState
-                                                    .status.isClockedIn
-                                                ? Colors.white
-                                                : Colors.white.withOpacity(0.9),
-                                          ),
-                                        ),
-                                        if (clockInOutState
-                                                .status.isClockedIn &&
-                                            clockInOutState
-                                                    .status.currentSession !=
-                                                null) ...[
-                                          const SizedBox(width: 8),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 6, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color:
-                                                  Colors.white.withOpacity(0.2),
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                            ),
-                                            child: Text(
-                                              _getCurrentDuration(),
-                                              style: const TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 30, horizontal: 20),
+                    child: Center(
+                      child: Text(
+                        user?.name ?? 'Sales Representative',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Manage your sales activities efficiently',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   ),
 
                   // Menu Grid
                   Container(
-                    height: MediaQuery.of(context).size.height * 0.6,
+                    height: MediaQuery.of(context).size.height * 0.7,
                     decoration: const BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.only(
@@ -443,13 +321,12 @@ class _HomePageState extends ConsumerState<HomePage> {
                                   subtitle: 'Manage clients',
                                 ),
 
-                                // Reports (Implemented)
+                                // Notices (Implemented)
                                 MenuTile(
-                                  title: 'Reports',
-                                  icon: Icons.analytics,
-                                  onTap: () =>
-                                      context.push('/reports/selection'),
-                                  subtitle: 'Sales analytics',
+                                  title: 'Notices',
+                                  icon: Icons.notifications,
+                                  onTap: () => context.push('/notices'),
+                                  subtitle: 'View announcements',
                                 ),
 
                                 // Profile (Implemented)
@@ -512,16 +389,6 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
           ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          // Navigate to create journey plan (most common action)
-          context.push('/journey-plans');
-        },
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add),
-        label: const Text('New Plan'),
       ),
     );
   }

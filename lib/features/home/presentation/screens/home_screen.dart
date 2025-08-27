@@ -30,7 +30,7 @@ class HomeScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Welcome Card
+            // Welcome Card - Name and Role only
             Card(
               elevation: AppConstants.defaultElevation,
               child: Padding(
@@ -90,40 +90,7 @@ class HomeScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
 
-            // User Info Card
-            Card(
-              elevation: AppConstants.defaultElevation,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'User Information',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildInfoRow('Email', user?.email ?? 'N/A'),
-                    _buildInfoRow('Phone', user?.phoneNumber ?? 'N/A'),
-                    _buildInfoRow('Role', user?.role ?? 'N/A'),
-                    _buildInfoRow(
-                        'Country ID', user?.countryId.toString() ?? 'N/A'),
-                    _buildInfoRow(
-                        'Region ID', user?.regionId.toString() ?? 'N/A'),
-                    _buildInfoRow(
-                        'Route ID', user?.routeId.toString() ?? 'N/A'),
-                    _buildInfoRow(
-                        'Status', user?.status == 1 ? 'Active' : 'Inactive'),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Quick Actions
+            // Quick Actions Grid
             const Text(
               'Quick Actions',
               style: TextStyle(
@@ -181,35 +148,6 @@ class HomeScreen extends ConsumerWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              '$label:',
-              style: const TextStyle(
-                fontWeight: FontWeight.w500,
-                color: Colors.grey,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
