@@ -1,18 +1,18 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dio/dio.dart';
+import '../../../../core/network/api_client.dart';
 import '../../data/datasources/notices_remote_data_source.dart';
 import '../../data/repositories/notices_repository_impl.dart';
 import '../../data/models/notice.dart';
 
-// Dio provider
-final dioProvider = Provider<Dio>((ref) {
-  return Dio();
+// API client provider
+final apiClientProvider = Provider<ApiClient>((ref) {
+  return ApiClient();
 });
 
 // Data source provider
 final noticesDataSourceProvider = Provider<NoticesRemoteDataSource>((ref) {
-  final dio = ref.watch(dioProvider);
-  return NoticesRemoteDataSourceImpl(dio);
+  final apiClient = ref.watch(apiClientProvider);
+  return NoticesRemoteDataSourceImpl(apiClient.dio);
 });
 
 // Repository provider

@@ -63,7 +63,7 @@ class _ShowOfShelfReportFormState extends ConsumerState<ShowOfShelfReportForm> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content:
-                Text('✅ Show of Shelf report submitted successfully! You can submit more reports or check out.'),
+                Text('✅ Share of Shelf report submitted successfully! You can submit more reports or check out.'),
             backgroundColor: Colors.green,
           ),
         );
@@ -101,7 +101,7 @@ class _ShowOfShelfReportFormState extends ConsumerState<ShowOfShelfReportForm> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Show of Shelf Report'),
+        title: const Text('Share of Shelf Report'),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
       ),
@@ -127,7 +127,7 @@ class _ShowOfShelfReportFormState extends ConsumerState<ShowOfShelfReportForm> {
                       Icon(Icons.check_circle, color: Colors.green[600]),
                       const SizedBox(width: 8),
                       Text(
-                        'Show of Shelf report completed',
+                        'Share of Shelf report completed',
                         style: TextStyle(
                           color: Colors.green[700],
                           fontWeight: FontWeight.w600,
@@ -225,7 +225,7 @@ class _ShowOfShelfReportFormState extends ConsumerState<ShowOfShelfReportForm> {
                           ),
                         )
                       : const Text(
-                          'Submit Show of Shelf Report',
+                            'Submit Share of Shelf Report',
                           style: TextStyle(fontSize: 16),
                         ),
                 ),

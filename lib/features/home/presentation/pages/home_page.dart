@@ -8,6 +8,7 @@ import '../../../../core/providers/providers.dart';
 import '../../../clients/presentation/providers/clients_providers.dart';
 import '../../../journey_plans/presentation/providers/journey_plans_providers.dart';
 import '../../../clock_in_out/presentation/providers/clock_in_out_providers.dart';
+import '../../../notices/presentation/providers/notices_providers.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -23,17 +24,13 @@ class _HomePageState extends ConsumerState<HomePage> {
   @override
   void initState() {
     super.initState();
-    // Load clock status when page initializes
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authState = ref.read(authProvider);
       if (authState.isAuthenticated && authState.user != null) {
-        print(
-            '🔄 HomePage: Loading clock status on init for user ${authState.user!.id}');
         ref
             .read(clockInOutNotifierProvider.notifier)
             .loadClockStatus(authState.user!.id);
 
-        // Start periodic refresh for status updates (less frequent since we use real-time duration)
         _statusRefreshTimer =
             Timer.periodic(const Duration(minutes: 5), (timer) {
           final currentAuthState = ref.read(authProvider);
@@ -45,12 +42,9 @@ class _HomePageState extends ConsumerState<HomePage> {
           }
         });
 
-        // Check if user is already clocked in and start duration updates
         final currentClockState = ref.read(clockInOutNotifierProvider);
         if (currentClockState.status.isClockedIn &&
             currentClockState.status.currentSession != null) {
-          print(
-              '🔄 HomePage: User already clocked in, starting duration updates');
           _startDurationUpdates();
         }
       }
@@ -63,14 +57,9 @@ class _HomePageState extends ConsumerState<HomePage> {
       final clockState = ref.read(clockInOutNotifierProvider);
       if (clockState.status.isClockedIn &&
           clockState.status.currentSession != null) {
-        // Force UI rebuild to update duration display using session start time
         setState(() {});
-        print(
-            '🔄 Duration update: ${clockState.status.currentSession!.formattedDuration}');
       } else {
-        // Stop timer if not clocked in
         timer.cancel();
-        print('🔄 Stopping duration updates - user not clocked in');
       }
     });
   }
@@ -85,12 +74,8 @@ class _HomePageState extends ConsumerState<HomePage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Refresh status when dependencies change (e.g., when returning to this page)
     final authState = ref.read(authProvider);
     if (authState.isAuthenticated && authState.user != null) {
-      print(
-          '🔄 HomePage: Refreshing clock status on dependency change for user ${authState.user!.id}');
-      // Use Future.microtask to avoid modifying provider during build
       Future.microtask(() {
         ref
             .read(clockInOutNotifierProvider.notifier)
@@ -103,14 +88,8 @@ class _HomePageState extends ConsumerState<HomePage> {
     final clockState = ref.read(clockInOutNotifierProvider);
     if (clockState.status.isClockedIn &&
         clockState.status.currentSession != null) {
-      final session = clockState.status.currentSession!;
-      print(
-          '🔍 Duration Debug - Session ID: ${session.id}, Status: ${session.status}, Start: ${session.sessionStart}, IsActive: ${session.isActive}');
-      final duration = session.formattedDuration;
-      print('🔍 Duration Debug - Calculated duration: $duration');
-      return duration;
+      return clockState.status.currentSession!.formattedDuration;
     }
-    print('🔍 Duration Debug - No active session found');
     return '--:--';
   }
 
@@ -118,39 +97,30 @@ class _HomePageState extends ConsumerState<HomePage> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final user = authState.user;
-
-    // Watch real data from API providers
     final clientsState = ref.watch(clientsNotifierProvider);
     final journeyPlansState = ref.watch(journeyPlansNotifierProvider);
     final clockInOutState = ref.watch(clockInOutNotifierProvider);
+    final noticesState = ref.watch(noticesNotifierProvider);
 
-    // Debug: Print current clock status
-    print(
-        '🔄 HomePage: Current clock status - isClockedIn: ${clockInOutState.status.isClockedIn}, isLoading: ${clockInOutState.isLoading}');
-
-    // Listen for clock status changes to manage duration updates
     ref.listen(clockInOutNotifierProvider, (previous, next) {
       if (previous?.status.isClockedIn != next.status.isClockedIn) {
         if (next.status.isClockedIn && next.status.currentSession != null) {
-          print(
-              '🔄 HomePage: Starting duration updates - user clocked in at ${next.status.currentSession!.sessionStart}');
           _startDurationUpdates();
         } else {
-          print('🔄 HomePage: Stopping duration updates - user clocked out');
           _durationUpdateTimer?.cancel();
         }
       }
     });
 
-    // Load data on first build
     ref.listen(authProvider, (previous, next) {
       if (next.isAuthenticated && (previous?.isAuthenticated != true)) {
-        // Load data when user becomes authenticated
         Future.microtask(() {
-          print('🔄 HomePage: Loading data for user ${next.user!.id}');
           ref.read(clientsNotifierProvider.notifier).loadClients();
           ref.read(journeyPlansNotifierProvider.notifier).loadJourneyPlans();
-          print('🔄 HomePage: Loading clock status for user ${next.user!.id}');
+          ref.read(noticesNotifierProvider.notifier).loadNotices(
+                countryId:
+                    next.user!.countryId > 0 ? next.user!.countryId : null,
+              );
           ref
               .read(clockInOutNotifierProvider.notifier)
               .loadClockStatus(next.user!.id);
@@ -164,18 +134,15 @@ class _HomePageState extends ConsumerState<HomePage> {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         elevation: 0,
+        centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications),
-            onPressed: () {
-              // TODO: Navigate to notifications
-            },
+            icon: const Icon(Icons.notifications_outlined),
+            onPressed: () {},
           ),
           IconButton(
-            icon: const Icon(Icons.person),
-            onPressed: () {
-              context.push('/profile');
-            },
+            icon: const Icon(Icons.person_outline),
+            onPressed: () => context.push('/profile'),
           ),
           IconButton(
             icon: const Icon(Icons.logout),
@@ -201,95 +168,96 @@ class _HomePageState extends ConsumerState<HomePage> {
             onRefresh: () async {
               final authState = ref.read(authProvider);
               if (authState.isAuthenticated && authState.user != null) {
-                print(
-                    '🔄 HomePage: Manual refresh triggered for user ${authState.user!.id}');
-                await ref
-                    .read(clockInOutNotifierProvider.notifier)
-                    .loadClockStatus(authState.user!.id);
-                await ref.read(clientsNotifierProvider.notifier).loadClients();
-                await ref
-                    .read(journeyPlansNotifierProvider.notifier)
-                    .loadJourneyPlans();
+                await Future.wait([
+                  ref
+                      .read(clockInOutNotifierProvider.notifier)
+                      .loadClockStatus(authState.user!.id),
+                  ref.read(clientsNotifierProvider.notifier).loadClients(),
+                  ref
+                      .read(journeyPlansNotifierProvider.notifier)
+                      .loadJourneyPlans(),
+                  ref.read(noticesNotifierProvider.notifier).loadNotices(
+                        countryId: authState.user!.countryId > 0
+                            ? authState.user!.countryId
+                            : null,
+                      ),
+                ]);
               }
             },
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              child: Column(
-                children: [
-                  // Sales Rep Name Section
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 30, horizontal: 20),
-                    child: Center(
-                      child: Text(
-                        user?.name ?? 'Sales Representative',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
+            child: Column(
+              children: [
+                // Welcome Section
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+                  child: Text(
+                    'Welcome, ${user?.name?.split(' ').first ?? 'Sales Rep'}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w600,
                     ),
+                    textAlign: TextAlign.center,
                   ),
+                ),
 
-                  // Menu Grid
-                  Container(
-                    height: MediaQuery.of(context).size.height * 0.7,
+                // Menu Grid - Full Height
+                Expanded(
+                  child: Container(
                     decoration: const BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(30),
-                        topRight: Radius.circular(30),
+                        topLeft: Radius.circular(25),
+                        topRight: Radius.circular(25),
                       ),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.fromLTRB(20, 25, 20, 20),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
                             'Quick Actions',
                             style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
                               color: AppColors.textPrimary,
                             ),
                           ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 15),
                           Expanded(
                             child: GridView.count(
                               crossAxisCount: 2,
-                              crossAxisSpacing: 16,
-                              mainAxisSpacing: 16,
-                              childAspectRatio: 1.1,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                              childAspectRatio: 1.2,
                               children: [
-                                // Clock In/Out (Implemented)
+                                // Clock In/Out
                                 Container(
                                   decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(16),
                                     border: Border.all(
                                       color: clockInOutState.status.isClockedIn
                                           ? AppColors.success
                                           : AppColors.primary,
-                                      width: 2,
+                                      width: 1.5,
                                     ),
                                     color: clockInOutState.status.isClockedIn
-                                        ? AppColors.success.withOpacity(0.1)
-                                        : Colors.white,
+                                        ? AppColors.success.withOpacity(0.05)
+                                        : AppColors.primary.withOpacity(0.05),
                                   ),
                                   child: MenuTile(
                                     title: clockInOutState.status.isClockedIn
                                         ? 'Clock Out'
                                         : 'Clock In',
                                     icon: clockInOutState.status.isClockedIn
-                                        ? Icons.logout
-                                        : Icons.login,
+                                        ? Icons.logout_rounded
+                                        : Icons.login_rounded,
                                     onTap: () => _showClockConfirmationDialog(
                                         context, ref, user!.id),
                                     subtitle: clockInOutState.status.isClockedIn
-                                        ? 'End work session'
-                                        : 'Start work session',
+                                        ? 'End session'
+                                        : 'Start session',
                                     isLoading: clockInOutState.isClockingIn ||
                                         clockInOutState.isClockingOut,
                                     badgeText:
@@ -302,81 +270,79 @@ class _HomePageState extends ConsumerState<HomePage> {
                                   ),
                                 ),
 
-                                // Journey Plans (Implemented)
+                                // Journey Plans
                                 MenuTile(
                                   title: 'Journey Plans',
-                                  icon: Icons.map,
+                                  icon: Icons.map_rounded,
                                   onTap: () => context.push('/journey-plans'),
                                   badgeCount:
                                       journeyPlansState.journeyPlans.length,
                                   subtitle: 'Route planning',
                                 ),
 
-                                // Clients (Implemented)
+                                // Clients
                                 MenuTile(
                                   title: 'Clients',
-                                  icon: Icons.people,
+                                  icon: Icons.people_rounded,
                                   onTap: () => context.push('/clients'),
                                   badgeCount: clientsState.clients.length,
                                   subtitle: 'Manage clients',
                                 ),
 
-                                // Notices (Implemented)
+                                // Notices
                                 MenuTile(
                                   title: 'Notices',
-                                  icon: Icons.notifications,
+                                  icon: Icons.notifications_rounded,
                                   onTap: () => context.push('/notices'),
-                                  subtitle: 'View announcements',
+                                  badgeCount: noticesState.notices.length,
+                                  subtitle: 'Announcements',
                                 ),
 
-                                // Profile (Implemented)
+                                // Profile
                                 MenuTile(
                                   title: 'Profile',
-                                  icon: Icons.person,
+                                  icon: Icons.person_rounded,
                                   onTap: () => context.push('/profile'),
-                                  subtitle: 'User settings',
+                                  subtitle: 'Settings',
                                 ),
+                              ],
+                            ),
+                          ),
 
-                                // COMMENTED OUT - NOT YET IMPLEMENTED
-                                // // Dashboard
-                                // MenuTile(
-                                //   title: 'Dashboard',
-                                //   icon: Icons.dashboard,
-                                //   onTap: () => context.push('/dashboard'),
-                                //   subtitle: 'View overview',
-                                // ),
-
-                                // // Products
-                                // MenuTile(
-                                //   title: 'Products',
-                                //   icon: Icons.inventory,
-                                //   onTap: () => context.push('/products'),
-                                //   subtitle: 'Product catalog',
-                                // ),
-
-                                // // Orders
-                                // MenuTile(
-                                //   title: 'Orders',
-                                //   icon: Icons.shopping_cart,
-                                //   onTap: () => context.push('/orders'),
-                                //   subtitle: 'Process orders',
-                                // ),
-
-                                // // Tasks
-                                // MenuTile(
-                                //   title: 'Tasks',
-                                //   icon: Icons.task,
-                                //   onTap: () => context.push('/tasks'),
-                                //   subtitle: 'Manage tasks',
-                                // ),
-
-                                // // Analytics
-                                // MenuTile(
-                                //   title: 'Analytics',
-                                //   icon: Icons.trending_up,
-                                //   onTap: () => context.push('/analytics'),
-                                //   subtitle: 'Performance metrics',
-                                // ),
+                          // Footer at bottom
+                          Container(
+                            margin: const EdgeInsets.only(top: 20),
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 16, horizontal: 20),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                  spreadRadius: 0,
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.check_circle,
+                                  size: 16,
+                                  color: AppColors.success,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Powered by CitlogisticsSystems',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[600],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -384,8 +350,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
@@ -403,21 +369,29 @@ class _HomePageState extends ConsumerState<HomePage> {
       builder: (BuildContext context) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(20),
           ),
           title: Row(
             children: [
-              Icon(
-                isClockedIn ? Icons.logout : Icons.login,
-                color: isClockedIn ? AppColors.error : AppColors.success,
-                size: 24,
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: (isClockedIn ? AppColors.error : AppColors.success)
+                      .withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  isClockedIn ? Icons.logout_rounded : Icons.login_rounded,
+                  color: isClockedIn ? AppColors.error : AppColors.success,
+                  size: 20,
+                ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 12),
               Text(
                 isClockedIn ? 'Clock Out' : 'Clock In',
                 style: const TextStyle(
                   fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
@@ -428,33 +402,31 @@ class _HomePageState extends ConsumerState<HomePage> {
             children: [
               Text(
                 isClockedIn
-                    ? 'Are you sure you want to end your work session?'
-                    : 'Are you sure you want to start your work session?',
-                style: const TextStyle(fontSize: 16),
+                    ? 'End your work session?'
+                    : 'Start your work session?',
+                style: const TextStyle(fontSize: 15),
               ),
               if (isClockedIn && clockState.status.currentSession != null) ...[
                 const SizedBox(height: 12),
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppColors.success.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: AppColors.success.withOpacity(0.3),
-                    ),
+                    color: AppColors.success.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        Icons.timer,
+                        Icons.timer_outlined,
                         color: AppColors.success,
                         size: 16,
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 6),
                       Text(
-                        'Current session: ${_getCurrentDuration()}',
+                        'Session: ${_getCurrentDuration()}',
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 13,
                           fontWeight: FontWeight.w600,
                           color: AppColors.success,
                         ),
@@ -468,9 +440,13 @@ class _HomePageState extends ConsumerState<HomePage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text(
+              style: TextButton.styleFrom(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              ),
+              child: Text(
                 'Cancel',
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(color: Colors.grey[600]),
               ),
             ),
             ElevatedButton(
@@ -483,8 +459,11 @@ class _HomePageState extends ConsumerState<HomePage> {
                     isClockedIn ? AppColors.error : AppColors.success,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(10),
                 ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                elevation: 0,
               ),
               child: Text(
                 isClockedIn ? 'Clock Out' : 'Clock In',
@@ -508,9 +487,18 @@ class _HomePageState extends ConsumerState<HomePage> {
       if (success && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Successfully clocked out!'),
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                const Text('Successfully clocked out!'),
+              ],
+            ),
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         );
       }
@@ -519,9 +507,18 @@ class _HomePageState extends ConsumerState<HomePage> {
       if (success && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Successfully clocked in!'),
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                const Text('Successfully clocked in!'),
+              ],
+            ),
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         );
       }
@@ -532,9 +529,18 @@ class _HomePageState extends ConsumerState<HomePage> {
           ref.read(clockInOutNotifierProvider).error ?? 'Operation failed';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(error),
+          content: Row(
+            children: [
+              Icon(Icons.error_outline, color: Colors.white, size: 18),
+              const SizedBox(width: 8),
+              Expanded(child: Text(error)),
+            ],
+          ),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
     }

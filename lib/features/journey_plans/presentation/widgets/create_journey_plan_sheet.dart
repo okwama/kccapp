@@ -5,31 +5,32 @@ import '../../../../core/constants/app_colors.dart';
 import '../providers/journey_plans_providers.dart';
 import '../../../clients/presentation/providers/clients_providers.dart';
 import '../../../clients/domain/entities/client.dart';
+import '../../../clients/presentation/providers/clients_state.dart';
 
-class CreateJourneyPlanSheet extends ConsumerStatefulWidget {
-  const CreateJourneyPlanSheet({super.key});
+class CreateJourneyPlanPage extends ConsumerStatefulWidget {
+  const CreateJourneyPlanPage({super.key});
 
   @override
-  ConsumerState<CreateJourneyPlanSheet> createState() =>
-      _CreateJourneyPlanSheetState();
+  ConsumerState<CreateJourneyPlanPage> createState() =>
+      _CreateJourneyPlanPageState();
 }
 
-class _CreateJourneyPlanSheetState
-    extends ConsumerState<CreateJourneyPlanSheet> {
+class _CreateJourneyPlanPageState extends ConsumerState<CreateJourneyPlanPage> {
   final _formKey = GlobalKey<FormState>();
   final _notesController = TextEditingController();
+  final _searchController = TextEditingController();
 
   DateTime _selectedDate = DateTime.now();
   TimeOfDay _selectedTime = TimeOfDay.now();
   int? _selectedClientId;
   bool _isLoading = false;
-
-
+  List<Client> _filteredClients = [];
+  bool _isSearching = false;
 
   @override
   void initState() {
     super.initState();
-    // Load clients when the form opens
+    // Load clients when the page opens
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(clientsNotifierProvider.notifier).loadClients();
     });
@@ -38,171 +39,236 @@ class _CreateJourneyPlanSheetState
   @override
   void dispose() {
     _notesController.dispose();
+    _searchController.dispose();
     super.dispose();
+  }
+
+  void _filterClients(String query) {
+    final clientsState = ref.read(clientsNotifierProvider);
+    if (query.isEmpty) {
+      setState(() {
+        _filteredClients = clientsState.clients;
+        _isSearching = false;
+      });
+    } else {
+      setState(() {
+        _filteredClients = clientsState.clients
+            .where((client) =>
+                client.name.toLowerCase().contains(query.toLowerCase()) ||
+                (client.location?.toLowerCase().contains(query.toLowerCase()) ??
+                    false))
+            .toList();
+        _isSearching = true;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-        left: 16,
-        right: 16,
-        top: 16,
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text('Create Journey Plan'),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        elevation: 0,
       ),
-      child: Form(
+      body: Form(
         key: _formKey,
         child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Header
-            Row(
-              children: [
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close),
-                ),
-                const Expanded(
-                  child: Text(
-                    'Create Journey Plan',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                const SizedBox(width: 48), // Balance the close button
-              ],
+            // Top section with date and time side by side
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  // Date Selection
+                  Expanded(child: _buildDatePicker()),
+                  const SizedBox(width: 16),
+                  // Time Selection
+                  Expanded(child: _buildTimePicker()),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
 
-            // Client Selection
-            _buildClientDropdown(),
-            const SizedBox(height: 16),
+            // Client Search and Selection
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: _buildClientSearchSection(),
+            ),
 
-            // Date Selection
-            _buildDatePicker(),
-            const SizedBox(height: 16),
+            // Client List - takes remaining space
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: _buildClientListSection(),
+              ),
+            ),
 
-            // Time Selection
-            _buildTimePicker(),
-            const SizedBox(height: 16),
-
-            // Notes
-            _buildNotesField(),
-            const SizedBox(height: 24),
-
-            // Create Button
-            _buildCreateButton(),
-            const SizedBox(height: 16),
+            // Create Button at bottom
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: _buildCreateButton(),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildClientDropdown() {
+  Widget _buildClientSearchSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Select Client *',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+
+        // Search TextField
+        TextField(
+          controller: _searchController,
+          decoration: InputDecoration(
+            hintText: 'Search clients by name or location...',
+            prefixIcon: const Icon(Icons.search),
+            suffixIcon: _searchController.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear),
+                    onPressed: () {
+                      _searchController.clear();
+                      _filterClients('');
+                    },
+                  )
+                : null,
+            border: const OutlineInputBorder(),
+            filled: true,
+            fillColor: Colors.grey[50],
+          ),
+          onChanged: _filterClients,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildClientListSection() {
     final clientsState = ref.watch(clientsNotifierProvider);
-    
+
     if (clientsState.isLoading && clientsState.clients.isEmpty) {
-      return const InputDecorator(
-        decoration: InputDecoration(
-          labelText: 'Select Client *',
-          border: OutlineInputBorder(),
-          prefixIcon: Icon(Icons.business),
-        ),
-        child: Row(
-          children: [
-            SizedBox(
-              height: 20,
-              width: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-            SizedBox(width: 16),
-            Text('Loading clients...'),
-          ],
-        ),
+      return const Center(
+        child: CircularProgressIndicator(),
       );
     }
-    
+
     if (clientsState.error != null && clientsState.clients.isEmpty) {
-      return InputDecorator(
-        decoration: const InputDecoration(
-          labelText: 'Select Client *',
-          border: OutlineInputBorder(),
-          prefixIcon: Icon(Icons.business),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Error loading clients: ${clientsState.error}',
-              style: const TextStyle(color: Colors.red),
-            ),
-            TextButton(
-              onPressed: () {
-                ref.read(clientsNotifierProvider.notifier).loadClients();
-              },
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
-      );
+      return _buildErrorState(clientsState.error!);
     }
-    
+
     if (clientsState.clients.isEmpty && !clientsState.isLoading) {
-      return const InputDecorator(
-        decoration: InputDecoration(
-          labelText: 'Select Client *',
-          border: OutlineInputBorder(),
-          prefixIcon: Icon(Icons.business),
-        ),
+      return const Center(
         child: Text('No clients available'),
       );
     }
-    
-    return DropdownButtonFormField<int>(
-      value: _selectedClientId,
-      decoration: const InputDecoration(
-        labelText: 'Select Client *',
-        border: OutlineInputBorder(),
-        prefixIcon: Icon(Icons.business),
+
+    return _buildClientList(clientsState);
+  }
+
+  Widget _buildErrorState(String error) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.red[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.red[200]!),
       ),
-      items: clientsState.clients.map<DropdownMenuItem<int>>((client) {
-        return DropdownMenuItem<int>(
-          value: client.id,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                client.name,
-                style: const TextStyle(fontWeight: FontWeight.w500),
-              ),
-              Text(
-                client.location ?? 'No location',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                ),
-              ),
-            ],
+      child: Column(
+        children: [
+          Text(
+            'Error loading clients: $error',
+            style: const TextStyle(color: Colors.red),
           ),
-        );
-      }).toList(),
-      onChanged: (value) {
-        setState(() {
-          _selectedClientId = value;
-        });
-      },
-      validator: (value) {
-        if (value == null) {
-          return 'Please select a client';
-        }
-        return null;
-      },
+          const SizedBox(height: 8),
+          ElevatedButton(
+            onPressed: () {
+              ref.read(clientsNotifierProvider.notifier).loadClients();
+            },
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildClientList(ClientsState clientsState) {
+    final clientsToShow =
+        _isSearching ? _filteredClients : clientsState.clients;
+
+    if (clientsToShow.isEmpty && _isSearching) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        child: const Center(
+          child: Text(
+            'No clients found matching your search',
+            style: TextStyle(color: Colors.grey),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey[300]!),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ListView.builder(
+        itemCount: clientsToShow.length,
+        itemBuilder: (context, index) {
+          final client = clientsToShow[index];
+          final isSelected = _selectedClientId == client.id;
+
+          return ListTile(
+            leading: CircleAvatar(
+              backgroundColor:
+                  isSelected ? AppColors.primary : Colors.grey[300],
+              child: Icon(
+                Icons.business,
+                color: isSelected ? Colors.white : Colors.grey[600],
+              ),
+            ),
+            title: Text(
+              client.name,
+              style: TextStyle(
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                color: isSelected ? AppColors.primary : Colors.black87,
+              ),
+            ),
+            subtitle: Text(
+              client.location ?? 'No location',
+              style: TextStyle(
+                fontSize: 12,
+                color: isSelected
+                    ? AppColors.primary.withOpacity(0.7)
+                    : Colors.grey[600],
+              ),
+            ),
+            trailing: isSelected
+                ? Icon(
+                    Icons.check_circle,
+                    color: AppColors.primary,
+                  )
+                : null,
+            onTap: () {
+              setState(() {
+                _selectedClientId = client.id;
+              });
+            },
+            tileColor: isSelected ? AppColors.primary.withOpacity(0.1) : null,
+          );
+        },
+      ),
     );
   }
 
@@ -255,29 +321,32 @@ class _CreateJourneyPlanSheetState
   }
 
   Widget _buildCreateButton() {
-    return ElevatedButton(
-      onPressed: _isLoading ? null : _createJourneyPlan,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: _isLoading ? null : _createJourneyPlan,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
         ),
-      ),
-      child: _isLoading
-          ? const SizedBox(
-              height: 20,
-              width: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+        child: _isLoading
+            ? const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : const Text(
+                'Create Journey Plan',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
-            )
-          : const Text(
-              'Create Journey Plan',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-            ),
+      ),
     );
   }
 

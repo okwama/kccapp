@@ -19,20 +19,24 @@ class ReportsSelectionPage extends ConsumerWidget {
 
   static Future<void> _performCheckOut(
       BuildContext context, WidgetRef ref, int journeyPlanId) async {
-    // Show loading indicator
+    // Show initial loading indicator
+    if (!context.mounted) return;
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(),
-      ),
+      builder: (context) =>
+          _buildLoadingDialog(context, 'Preparing check-out...'),
     );
 
     try {
-      // Get current location
+      // Step 1: Get current location
+      if (!context.mounted) return;
+      _updateLoadingDialog(context, 'Getting your location...');
+
       final locationResult = await LocationService.getCurrentLocation();
 
       if (!locationResult.isSuccess) {
+        if (!context.mounted) return;
         Navigator.of(context).pop(); // Close loading
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -45,6 +49,7 @@ class ReportsSelectionPage extends ConsumerWidget {
 
       // Show location message
       if (locationResult.isDefault) {
+        if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Using default location (Nairobi)'),
@@ -53,21 +58,33 @@ class ReportsSelectionPage extends ConsumerWidget {
         );
       }
 
-      Navigator.of(context).pop(); // Close loading
+      // Step 2: Perform check-out
+      if (!context.mounted) return;
+      _updateLoadingDialog(context, 'Completing check-out...');
 
       // Use the journey plan ID passed as parameter
-
-      // Perform check-out
       await ref.read(journeyPlansNotifierProvider.notifier).checkOut(
             journeyPlanId,
             latitude: locationResult.latitude,
             longitude: locationResult.longitude,
           );
 
+      // Step 3: Success and navigation
+      if (!context.mounted) return;
+      _updateLoadingDialog(context, 'Check-out successful! Redirecting...');
+
+      // Brief pause to show success
+      await Future.delayed(const Duration(milliseconds: 800));
+
+      // Don't close the loading dialog here - let it persist during navigation
+      // Navigator.of(context).pop(); // Close loading
+
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Successfully checked out!'),
+          content: Text('✅ Successfully checked out!'),
           backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
         ),
       );
 
@@ -79,14 +96,93 @@ class ReportsSelectionPage extends ConsumerWidget {
       // Refresh the journey plans
       ref.read(journeyPlansNotifierProvider.notifier).loadJourneyPlans();
     } catch (e) {
-      Navigator.of(context).pop(); // Close loading
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to check out: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to check out: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
+  }
+
+  // Helper method to build the loading dialog
+  static Widget _buildLoadingDialog(BuildContext context, String message) {
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.15),
+              blurRadius: 20,
+              spreadRadius: 5,
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Animated loading indicator with primary color
+            SizedBox(
+              width: 60,
+              height: 60,
+              child: CircularProgressIndicator(
+                strokeWidth: 4,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  Theme.of(context).primaryColor,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            // Message text with better typography
+            Text(
+              message,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            // Subtitle for better context
+            Text(
+              'Please wait...',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Helper method to update loading dialog content without closing it
+  static void _updateLoadingDialog(BuildContext context, String message) {
+    if (!context.mounted) return;
+
+    // Instead of closing and reopening the dialog, just update the current one
+    // This prevents the loader from disappearing
+    Navigator.of(context).pop();
+
+    // Small delay to ensure smooth transition
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => _buildLoadingDialog(context, message),
+        );
+      }
+    });
   }
 
   @override
@@ -216,7 +312,7 @@ class ReportsSelectionPage extends ConsumerWidget {
 
             _buildReportCard(
               context: context,
-              title: 'Show of Shelf Report',
+              title: 'Share of Shelf Report',
               description: 'Track shelf space and market share analysis',
               icon: Icons.storefront,
               iconColor: Colors.blue,
@@ -263,24 +359,24 @@ class ReportsSelectionPage extends ConsumerWidget {
             ),
             SizedBox(height: isCompact ? 12 : 16),
 
-            _buildActionButton(
-              context: context,
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Reports skipped'),
-                    backgroundColor: Colors.blue,
-                  ),
-                );
-                context.pop();
-              },
-              icon: Icons.skip_next,
-              label: 'Skip Reports',
-              backgroundColor: Colors.transparent,
-              foregroundColor: Theme.of(context).colorScheme.primary,
-              isOutlined: true,
-              isCompact: isCompact,
-            ),
+            // _buildActionButton(
+            //   context: context,
+            //   onPressed: () {
+            //     ScaffoldMessenger.of(context).showSnackBar(
+            //       const SnackBar(
+            //         content: Text('Reports skipped'),
+            //         backgroundColor: Colors.blue,
+            //       ),
+            //     );
+            //     context.pop();
+            //   },
+            //   icon: Icons.skip_next,
+            //   label: 'Skip Reports',
+            //   backgroundColor: Colors.transparent,
+            //   foregroundColor: Theme.of(context).colorScheme.primary,
+            //   isOutlined: true,
+            //   isCompact: isCompact,
+            // ),
           ],
         ),
       ),

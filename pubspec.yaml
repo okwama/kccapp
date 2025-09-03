@@ -37,7 +37,6 @@ dependencies:
 
   # File & Image Handling
   image_picker: ^1.0.4
-  file_picker: ^6.1.1
 
   # Location & Maps
   # google_maps_flutter: ^2.5.0
@@ -85,6 +84,7 @@ dependencies:
   # Localization
   flutter_localizations:
     sdk: flutter
+  file_picker: ^10.3.2
 
 dev_dependencies:
   flutter_test:

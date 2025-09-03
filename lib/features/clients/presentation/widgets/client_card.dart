@@ -15,139 +15,153 @@ class ClientCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 2,
-      margin: EdgeInsets.zero,
+      elevation: 1,
+      margin: const EdgeInsets.only(bottom: 4.0),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+          child: Row(
             children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: AppColors.primary,
-                    child: Text(
-                      client.name.isNotEmpty
-                          ? client.name[0].toUpperCase()
-                          : '?',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+              // Avatar
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: AppColors.primary,
+                child: Text(
+                  client.name.isNotEmpty ? client.name[0].toUpperCase() : '?',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                ),
+              ),
+              const SizedBox(width: 12),
+
+              // Client Info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Name and Status
+                    Row(
                       children: [
-                        Text(
-                          client.name,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                        Expanded(
+                          child: Text(
+                            client.name,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        if (client.contact?.isNotEmpty == true)
-                          Text(
-                            client.contact!,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
-                            ),
-                          ),
+                        const SizedBox(width: 8),
+                        _buildCompactStatusChip(),
                       ],
                     ),
-                  ),
-                  _buildStatusChip(),
-                ],
-              ),
-              const SizedBox(height: 12),
-              if (client.address?.isNotEmpty == true) ...[
-                Row(
-                  children: [
-                    Icon(
-                      Icons.location_on_outlined,
-                      size: 16,
-                      color: Colors.grey[600],
+
+                    const SizedBox(height: 2),
+
+                    // Contact and Region
+                    Row(
+                      children: [
+                        if (client.contact?.isNotEmpty == true) ...[
+                          Icon(
+                            Icons.phone_outlined,
+                            size: 14,
+                            color: Colors.grey[600],
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              client.contact!,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey[600],
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                        ],
+                        if (client.region.isNotEmpty) ...[
+                          Icon(
+                            Icons.business_outlined,
+                            size: 14,
+                            color: Colors.grey[600],
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            client.region,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[600],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ],
                     ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        client.address!,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+
+                    const SizedBox(height: 2),
+
+                    // Address and Balance
+                    Row(
+                      children: [
+                        if (client.address?.isNotEmpty == true) ...[
+                          Icon(
+                            Icons.location_on_outlined,
+                            size: 14,
+                            color: Colors.grey[600],
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              client.address!,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey[600],
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                        if (client.balance != null && client.balance! > 0) ...[
+                          const SizedBox(width: 12),
+                          Icon(
+                            Icons.account_balance_wallet_outlined,
+                            size: 14,
+                            color: AppColors.error,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '\$${client.balance!.toStringAsFixed(2)}',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.error,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-              ],
-              Row(
-                children: [
-                  if (client.region.isNotEmpty) ...[
-                    Icon(
-                      Icons.business_outlined,
-                      size: 16,
-                      color: Colors.grey[600],
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      client.region,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                  if (client.routeName?.isNotEmpty == true) ...[
-                    const SizedBox(width: 16),
-                    Icon(
-                      Icons.route_outlined,
-                      size: 16,
-                      color: Colors.grey[600],
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      client.routeName!,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ],
               ),
-              if (client.balance != null && client.balance! > 0) ...[
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.account_balance_wallet_outlined,
-                      size: 16,
-                      color: Colors.grey[600],
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Balance: \$${client.balance!.toStringAsFixed(2)}',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: client.balance! > 0
-                            ? AppColors.error
-                            : Colors.grey[600],
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+
+              // Arrow indicator
+              Icon(
+                Icons.chevron_right,
+                color: Colors.grey[400],
+                size: 20,
+              ),
             ],
           ),
         ),
@@ -155,7 +169,7 @@ class ClientCard extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusChip() {
+  Widget _buildCompactStatusChip() {
     Color chipColor;
     String statusText;
     IconData statusIcon;
@@ -179,10 +193,10 @@ class ClientCard extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color: chipColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: chipColor.withOpacity(0.3)),
       ),
       child: Row(
@@ -190,14 +204,14 @@ class ClientCard extends StatelessWidget {
         children: [
           Icon(
             statusIcon,
-            size: 14,
+            size: 12,
             color: chipColor,
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 3),
           Text(
             statusText,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 11,
               color: chipColor,
               fontWeight: FontWeight.w500,
             ),

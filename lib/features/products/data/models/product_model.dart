@@ -1,23 +1,54 @@
 import 'package:json_annotation/json_annotation.dart';
+import 'package:hive/hive.dart';
 
 part 'product_model.g.dart';
 
+@HiveType(typeId: 1)
 @JsonSerializable()
-class ProductModel {
+class ProductModel extends HiveObject {
+  @HiveField(0)
   final int id;
+  
+  @HiveField(1)
   final String productCode;
+  
+  @HiveField(2)
   final String productName;
+  
+  @HiveField(3)
   final String? description;
+  
+  @HiveField(4)
   final int categoryId;
+  
+  @HiveField(5)
   final String? category;
+  
+  @HiveField(6)
   final String unitOfMeasure;
+  
+  @HiveField(7)
   final double costPrice;
+  
+  @HiveField(8)
   final double sellingPrice;
+  
+  @HiveField(9)
   final String taxType;
+  
+  @HiveField(10)
   final int? reorderLevel;
+  
+  @HiveField(11)
   final int? currentStock;
+  
+  @HiveField(12)
   final bool isActive;
+  
+  @HiveField(13)
   final DateTime? createdAt;
+  
+  @HiveField(14)
   final DateTime? updatedAt;
 
   ProductModel({

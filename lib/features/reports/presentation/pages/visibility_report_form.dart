@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import 'dart:html' as html;
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:typed_data';
 import '../../data/models/visibility_report_model.dart';
 import '../providers/reports_providers.dart';
 
@@ -152,16 +153,14 @@ class _VisibilityReportFormState extends ConsumerState<VisibilityReportForm> {
     if (_selectedImage == null) return const SizedBox.shrink();
 
     // Check if running on web
-    if (identical(0, 0.0)) {
+    if (kIsWeb) {
       // Web platform - use Image.memory
-      return FutureBuilder<html.File>(
-        future: _selectedImage!
-            .readAsBytes()
-            .then((bytes) => html.File([bytes], _selectedImage!.name)),
+      return FutureBuilder<Uint8List>(
+        future: _selectedImage!.readAsBytes(),
         builder: (context, snapshot) {
           if (snapshot.hasData) {
-            return Image.network(
-              html.Url.createObjectUrlFromBlob(snapshot.data!),
+            return Image.memory(
+              snapshot.data!,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) {
                 return Container(

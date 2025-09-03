@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../providers/profile_provider.dart';
 
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
@@ -10,6 +12,7 @@ class ProfilePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authProvider);
+    final profileState = ref.watch(profileNotifierProvider);
     final user = authState.user;
 
     return Scaffold(
@@ -96,39 +99,69 @@ class ProfilePage extends ConsumerWidget {
                         children: [
                           Stack(
                             children: [
-                              Container(
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      AppColors.primary,
-                                      AppColors.primaryDark,
+                              // Profile Photo
+                              GestureDetector(
+                                onTap: () => _showPhotoOptions(context, ref),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        AppColors.primary,
+                                        AppColors.primaryDark,
+                                      ],
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color:
+                                            AppColors.primary.withOpacity(0.3),
+                                        blurRadius: 20,
+                                        offset: const Offset(0, 8),
+                                      ),
                                     ],
                                   ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: AppColors.primary.withOpacity(0.3),
-                                      blurRadius: 20,
-                                      offset: const Offset(0, 8),
-                                    ),
-                                  ],
-                                ),
-                                child: CircleAvatar(
-                                  radius: 60,
-                                  backgroundColor: Colors.transparent,
-                                  child: Text(
-                                    user?.name.substring(0, 1).toUpperCase() ??
-                                        'U',
-                                    style: const TextStyle(
-                                      fontSize: 48,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
+                                  child: CircleAvatar(
+                                    radius: 60,
+                                    backgroundColor: Colors.transparent,
+                                    backgroundImage:
+                                        _getProfileImage(user?.photoUrl),
+                                    child: user?.photoUrl == null
+                                        ? Text(
+                                            user?.name
+                                                    .substring(0, 1)
+                                                    .toUpperCase() ??
+                                                'U',
+                                            style: const TextStyle(
+                                              fontSize: 48,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                        : null,
                                   ),
                                 ),
                               ),
+
+                              // Photo Upload Indicator
+                              if (profileState.isUploading)
+                                Positioned.fill(
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.5),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Center(
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 3,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                              // Status Indicator
                               Positioned(
                                 bottom: 5,
                                 right: 5,
@@ -146,6 +179,26 @@ class ProfilePage extends ConsumerWidget {
                                     user?.status == 1
                                         ? Icons.check
                                         : Icons.close,
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
+                                ),
+                              ),
+
+                              // Camera Icon for Photo Upload
+                              Positioned(
+                                bottom: 5,
+                                left: 5,
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                        color: Colors.white, width: 3),
+                                  ),
+                                  child: const Icon(
+                                    Icons.camera_alt,
                                     color: Colors.white,
                                     size: 16,
                                   ),
@@ -332,18 +385,14 @@ class ProfilePage extends ConsumerWidget {
                         title: 'Edit Profile',
                         subtitle: 'Update info',
                         color: AppColors.primary,
-                        onTap: () {
-                          // TODO: Navigate to edit profile
-                        },
+                        onTap: () => _showEditProfileDialog(context, ref, user),
                       ),
                       _buildActionCard(
                         icon: Icons.lock_outline,
                         title: 'Security',
                         subtitle: 'Change password',
                         color: AppColors.warning,
-                        onTap: () {
-                          // TODO: Navigate to change password
-                        },
+                        onTap: () => _showChangePasswordDialog(context, ref),
                       ),
                       _buildActionCard(
                         icon: Icons.settings_outlined,
@@ -417,22 +466,22 @@ class ProfilePage extends ConsumerWidget {
     return Row(
       children: [
         Container(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
             color: AppColors.primary.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(6),
           ),
           child: Icon(
             icon,
             color: AppColors.primary,
-            size: 20,
+            size: 18,
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 10),
         Text(
           title,
           style: const TextStyle(
-            fontSize: 18,
+            fontSize: 16,
             fontWeight: FontWeight.bold,
             color: Colors.black87,
           ),
@@ -448,22 +497,22 @@ class ProfilePage extends ConsumerWidget {
     required Color color,
   }) {
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
               icon,
               color: color,
-              size: 20,
+              size: 18,
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -471,7 +520,7 @@ class ProfilePage extends ConsumerWidget {
                 Text(
                   label,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 11,
                     color: Colors.grey[600],
                     fontWeight: FontWeight.w500,
                   ),
@@ -480,7 +529,7 @@ class ProfilePage extends ConsumerWidget {
                 Text(
                   value,
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.w600,
                     color: Colors.black87,
                   ),
@@ -561,6 +610,221 @@ class ProfilePage extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  ImageProvider? _getProfileImage(String? photoUrl) {
+    if (photoUrl == null || photoUrl.isEmpty) return null;
+    try {
+      return NetworkImage(photoUrl);
+    } catch (e) {
+      print('❌ Error loading profile image: $e');
+      return null;
+    }
+  }
+
+  void _showPhotoOptions(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Update Profile Photo',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 20),
+            ListTile(
+              leading:
+                  const Icon(Icons.photo_library, color: AppColors.primary),
+              title: const Text('Choose from Gallery'),
+              onTap: () {
+                Navigator.pop(context);
+                ref.read(profileNotifierProvider.notifier).uploadProfilePhoto();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: AppColors.primary),
+              title: const Text('Take Photo'),
+              onTap: () {
+                Navigator.pop(context);
+                _capturePhotoFromCamera(ref);
+              },
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _capturePhotoFromCamera(WidgetRef ref) async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? photo = await picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 80,
+        maxWidth: 512,
+        maxHeight: 512,
+      );
+
+      if (photo != null) {
+        await ref.read(profileNotifierProvider.notifier).uploadProfilePhoto();
+      }
+    } catch (e) {
+      print('❌ Error capturing photo: $e');
+    }
+  }
+
+  void _showEditProfileDialog(BuildContext context, WidgetRef ref, user) {
+    final nameController = TextEditingController(text: user?.name);
+    final emailController = TextEditingController(text: user?.email);
+    final phoneController = TextEditingController(text: user?.phoneNumber);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Profile'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                labelText: 'Name',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: emailController,
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: phoneController,
+              decoration: const InputDecoration(
+                labelText: 'Phone',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final success = await ref
+                  .read(profileNotifierProvider.notifier)
+                  .updateProfile(
+                    name: nameController.text,
+                    email: emailController.text,
+                    phoneNumber: phoneController.text,
+                  );
+
+              if (success && context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text('Profile updated successfully!')),
+                );
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showChangePasswordDialog(BuildContext context, WidgetRef ref) {
+    final currentPasswordController = TextEditingController();
+    final newPasswordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Change Password'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: currentPasswordController,
+              decoration: const InputDecoration(
+                labelText: 'Current Password',
+                border: OutlineInputBorder(),
+              ),
+              obscureText: true,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: newPasswordController,
+              decoration: const InputDecoration(
+                labelText: 'New Password',
+                border: OutlineInputBorder(),
+              ),
+              obscureText: true,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: confirmPasswordController,
+              decoration: const InputDecoration(
+                labelText: 'Confirm New Password',
+                border: OutlineInputBorder(),
+              ),
+              obscureText: true,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (newPasswordController.text !=
+                  confirmPasswordController.text) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('New passwords do not match!')),
+                );
+                return;
+              }
+
+              final success = await ref
+                  .read(profileNotifierProvider.notifier)
+                  .changePassword(
+                    currentPassword: currentPasswordController.text,
+                    newPassword: newPasswordController.text,
+                  );
+
+              if (success && context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text('Password changed successfully!')),
+                );
+              }
+            },
+            child: const Text('Change Password'),
+          ),
+        ],
       ),
     );
   }

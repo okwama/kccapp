@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../../../../core/providers/providers.dart';
 import '../../data/datasources/clients_remote_data_source.dart';
+import '../../data/datasources/clients_local_data_source.dart';
 import '../../data/repositories/clients_repository_impl.dart';
 import '../../domain/usecases/get_clients.dart';
 import '../../domain/usecases/search_clients.dart';
@@ -15,10 +16,18 @@ final clientsRemoteDataSourceProvider =
   return ClientsRemoteDataSourceImpl(apiClient.dio);
 });
 
+final clientsLocalDataSourceProvider = Provider<ClientsLocalDataSource>((ref) {
+  return ClientsLocalDataSourceImpl();
+});
+
 // Repository
 final clientsRepositoryProvider = Provider<ClientsRepositoryImpl>((ref) {
   final remoteDataSource = ref.watch(clientsRemoteDataSourceProvider);
-  return ClientsRepositoryImpl(remoteDataSource);
+  final localDataSource = ref.watch(clientsLocalDataSourceProvider);
+  return ClientsRepositoryImpl(
+    remoteDataSource: remoteDataSource,
+    localDataSource: localDataSource,
+  );
 });
 
 // Use Cases

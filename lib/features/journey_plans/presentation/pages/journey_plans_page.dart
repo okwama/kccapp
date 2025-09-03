@@ -238,7 +238,7 @@ class _JourneyPlansPageState extends ConsumerState<JourneyPlansPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => const CreateJourneyPlanSheet(),
+      builder: (context) => const CreateJourneyPlanPage(),
     );
   }
 

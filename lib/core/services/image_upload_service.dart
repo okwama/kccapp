@@ -24,7 +24,9 @@ class ImageUploadService {
       // Upload to server
       final response = await _dio.post('/uploads/upload', data: formData);
 
-      if (response.statusCode == 200 && response.data['success'] == true) {
+      // Accept both 200 (OK) and 201 (Created) as successful responses
+      if ((response.statusCode == 200 || response.statusCode == 201) &&
+          response.data['success'] == true) {
         return response.data['url'] as String?;
       }
 
@@ -50,7 +52,9 @@ class ImageUploadService {
       // Upload to server
       final response = await _dio.post('/uploads/upload', data: formData);
 
-      if (response.statusCode == 200 && response.data['success'] == true) {
+      // Accept both 200 (OK) and 201 (Created) as successful responses
+      if ((response.statusCode == 200 || response.statusCode == 201) &&
+          response.data['success'] == true) {
         return response.data['url'] as String?;
       }
 

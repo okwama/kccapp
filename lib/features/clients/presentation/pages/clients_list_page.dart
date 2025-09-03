@@ -80,7 +80,8 @@ class _ClientsListPageState extends ConsumerState<ClientsListPage> {
         children: [
           // Search Bar
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: ClientSearchBar(
               controller: _searchController,
               onSearch: _onSearch,
@@ -194,7 +195,7 @@ class _ClientsListPageState extends ConsumerState<ClientsListPage> {
 
     return ListView.builder(
       controller: _scrollController,
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
       itemCount: state.clients.length + (state.hasMore ? 1 : 0),
       itemBuilder: (context, index) {
         if (index == state.clients.length) {
@@ -202,12 +203,9 @@ class _ClientsListPageState extends ConsumerState<ClientsListPage> {
         }
 
         final client = state.clients[index];
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 8.0),
-          child: ClientCard(
-            client: client,
-            onTap: () => context.push('/clients/${client.id}'),
-          ),
+        return ClientCard(
+          client: client,
+          onTap: () => context.push('/clients/${client.id}'),
         );
       },
     );
@@ -215,9 +213,13 @@ class _ClientsListPageState extends ConsumerState<ClientsListPage> {
 
   Widget _buildLoadingIndicator() {
     return const Padding(
-      padding: EdgeInsets.all(16.0),
+      padding: EdgeInsets.symmetric(vertical: 8.0),
       child: Center(
-        child: CircularProgressIndicator(),
+        child: SizedBox(
+          height: 24,
+          width: 24,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
       ),
     );
   }

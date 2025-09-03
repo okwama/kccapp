@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme/app_theme.dart';
-import 'core/storage/local_storage.dart';
+import 'core/storage/storage_service.dart';
 import 'core/providers/providers.dart';
 import 'app.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize local storage
-  await LocalStorage.init();
+  // Initialize all storage systems
+  await StorageService.init();
 
   runApp(
     ProviderScope(

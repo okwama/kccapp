@@ -636,20 +636,24 @@ class AppRouter {
     WidgetRef ref,
     dynamic journeyPlan,
   ) async {
-    // Show loading indicator
+    // Show initial loading indicator
+    if (!context.mounted) return;
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(),
-      ),
+      builder: (context) =>
+          _buildLoadingDialog(context, 'Preparing check-in...'),
     );
 
     try {
-      // Get current location
+      // Step 1: Get current location
+      if (!context.mounted) return;
+      _updateLoadingDialog(context, 'Getting your location...');
+
       final locationResult = await LocationService.getCurrentLocation();
 
       if (!locationResult.isSuccess) {
+        if (!context.mounted) return;
         Navigator.of(context).pop(); // Close loading
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -662,6 +666,7 @@ class AppRouter {
 
       // Show location message
       if (locationResult.isDefault) {
+        if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Using default location (Nairobi)'),
@@ -670,7 +675,10 @@ class AppRouter {
         );
       }
 
-      // Capture photo
+      // Step 2: Capture photo
+      if (!context.mounted) return;
+      _updateLoadingDialog(context, 'Opening camera...');
+
       final ImagePicker picker = ImagePicker();
       XFile? photo;
 
@@ -681,6 +689,10 @@ class AppRouter {
         );
       } catch (e) {
         // On web, camera might not be available, try gallery
+        if (!context.mounted) return;
+        _updateLoadingDialog(
+            context, 'Camera not available, trying gallery...');
+
         try {
           photo = await picker.pickImage(
             source: ImageSource.gallery,
@@ -688,6 +700,7 @@ class AppRouter {
           );
         } catch (galleryError) {
           // If both fail, show error
+          if (!context.mounted) return;
           Navigator.of(context).pop(); // Close loading
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -699,10 +712,11 @@ class AppRouter {
         }
       }
 
-      Navigator.of(context).pop(); // Close loading
-
       if (photo != null) {
-        // Upload image
+        // Step 3: Upload image
+        if (!context.mounted) return;
+        _updateLoadingDialog(context, 'Uploading photo...');
+
         String? imageUrl;
         try {
           final apiClient = ref.read(apiClientProvider);
@@ -710,6 +724,7 @@ class AppRouter {
           imageUrl = await imageUploadService.uploadImage(photo);
 
           if (imageUrl == null) {
+            if (!context.mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text(
@@ -717,13 +732,21 @@ class AppRouter {
                 backgroundColor: Colors.orange,
               ),
             );
+          } else {
+            if (!context.mounted) return;
+            _updateLoadingDialog(context, 'Photo uploaded successfully!');
+            // Brief pause to show success
+            await Future.delayed(const Duration(milliseconds: 500));
           }
         } catch (e) {
           print('❌ Image upload failed: $e');
           // Continue with check-in even if image upload fails
         }
 
-        // Perform check-in
+        // Step 4: Perform check-in
+        if (!context.mounted) return;
+        _updateLoadingDialog(context, 'Completing check-in...');
+
         await ref.read(journeyPlansNotifierProvider.notifier).checkIn(
               journeyPlan.id,
               latitude: locationResult.latitude,
@@ -731,10 +754,22 @@ class AppRouter {
               imageUrl: imageUrl,
             );
 
+        // Step 5: Success and navigation
+        if (!context.mounted) return;
+        _updateLoadingDialog(context, 'Check-in successful! Redirecting...');
+
+        // Brief pause to show success
+        await Future.delayed(const Duration(milliseconds: 800));
+
+        // Don't close the loading dialog here - let it persist during navigation
+        // Navigator.of(context).pop(); // Close loading
+
+        if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Successfully checked in!'),
+            content: Text('✅ Successfully checked in!'),
             backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
           ),
         );
 
@@ -752,16 +787,106 @@ class AppRouter {
 
         // Refresh the journey plans
         ref.read(journeyPlansNotifierProvider.notifier).loadJourneyPlans();
+      } else {
+        // No photo selected
+        if (!context.mounted) return;
+        Navigator.of(context).pop(); // Close loading
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No photo selected. Check-in cancelled.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
       }
     } catch (e) {
-      Navigator.of(context).pop(); // Close loading
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to check in: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to check in: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
+  }
+
+  // Helper method to update loading dialog content without closing it
+  static void _updateLoadingDialog(BuildContext context, String message) {
+    if (!context.mounted) return;
+
+    // Instead of closing and reopening the dialog, just update the current one
+    // This prevents the loader from disappearing
+    Navigator.of(context).pop();
+
+    // Small delay to ensure smooth transition
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => _buildLoadingDialog(context, message),
+        );
+      }
+    });
+  }
+
+  // Helper method to build the loading dialog
+  static Widget _buildLoadingDialog(BuildContext context, String message) {
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.15),
+              blurRadius: 20,
+              spreadRadius: 5,
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Animated loading indicator with primary color
+            SizedBox(
+              width: 60,
+              height: 60,
+              child: CircularProgressIndicator(
+                strokeWidth: 4,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  Theme.of(context).primaryColor,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            // Message text with better typography
+            Text(
+              message,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            // Subtitle for better context
+            Text(
+              'Please wait...',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // Helper method for check-out process
@@ -770,20 +895,24 @@ class AppRouter {
     WidgetRef ref,
     dynamic journeyPlan,
   ) async {
-    // Show loading indicator
+    // Show initial loading indicator
+    if (!context.mounted) return;
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(),
-      ),
+      builder: (context) =>
+          _buildLoadingDialog(context, 'Preparing check-out...'),
     );
 
     try {
-      // Get current location
+      // Step 1: Get current location
+      if (!context.mounted) return;
+      _updateLoadingDialog(context, 'Getting your location...');
+
       final locationResult = await LocationService.getCurrentLocation();
 
       if (!locationResult.isSuccess) {
+        if (!context.mounted) return;
         Navigator.of(context).pop(); // Close loading
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -796,6 +925,7 @@ class AppRouter {
 
       // Show location message
       if (locationResult.isDefault) {
+        if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Using default location (Nairobi)'),
@@ -804,32 +934,47 @@ class AppRouter {
         );
       }
 
-      Navigator.of(context).pop(); // Close loading
+      // Step 2: Perform check-out
+      if (!context.mounted) return;
+      _updateLoadingDialog(context, 'Completing check-out...');
 
-      // Perform check-out
       await ref.read(journeyPlansNotifierProvider.notifier).checkOut(
             journeyPlan.id,
             latitude: locationResult.latitude,
             longitude: locationResult.longitude,
           );
 
+      // Step 3: Success
+      if (!context.mounted) return;
+      _updateLoadingDialog(context, 'Check-out successful!');
+
+      // Brief pause to show success
+      await Future.delayed(const Duration(milliseconds: 800));
+
+      // Don't close the loading dialog here - let it persist during refresh
+      // Navigator.of(context).pop(); // Close loading
+
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Successfully checked out!'),
+          content: Text('✅ Successfully checked out!'),
           backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
         ),
       );
 
       // Refresh the journey plans
       ref.read(journeyPlansNotifierProvider.notifier).loadJourneyPlans();
     } catch (e) {
-      Navigator.of(context).pop(); // Close loading
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to check out: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to check out: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

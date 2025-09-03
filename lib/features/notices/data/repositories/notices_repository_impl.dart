@@ -29,3 +29,4 @@ class NoticesRepositoryImpl implements NoticesRepository {
     }
   }
 }
+
